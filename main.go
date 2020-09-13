@@ -19,12 +19,17 @@ func stashAllContentsOfDir(dirPath string) error {
 	}
 
 	for _, fileInfo := range fileInfoList {
-		absPath := dirPath + "/" + fileInfo.Name()
-		if absPath == bufferPath {
-			continue
+		oldPath := dirPath + "/" + fileInfo.Name()
+		if oldPath == bufferPath {
+			continue // デスクトップに置いているbufferディレクトリは残す
 		}
 
-		err := os.Rename(absPath, bufferPath+"/"+fileInfo.Name())
+		newPath, err := newPath(fileInfo)
+		if err != nil {
+			return err
+		}
+
+		err = os.Rename(oldPath, *newPath)
 		if err != nil {
 			return err
 		}
@@ -32,6 +37,23 @@ func stashAllContentsOfDir(dirPath string) error {
 	fmt.Println(dirPath + " is cleanup!")
 
 	return nil
+}
+
+func newPath(info os.FileInfo) (*string, error) {
+	var newPath string
+	existFile, err := os.Stat(bufferPath + "/" + info.Name())
+	if existFile != nil {
+		newPath = bufferPath + "/" + info.Name() + "_1"
+	}
+	if err != nil {
+		if os.IsNotExist(err) {
+			newPath = bufferPath + "/" + info.Name()
+		} else {
+			return nil, err
+		}
+	}
+
+	return &newPath, nil
 }
 
 func main() {
